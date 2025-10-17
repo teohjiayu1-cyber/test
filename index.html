@@ -21,6 +21,13 @@
     <div id="app"></div>
 
     <script>
+        // ====== AIRTABLE CONFIGURATION ======
+        // REPLACE THESE WITH YOUR ACTUAL VALUES
+        const AIRTABLE_TOKEN = "patXCd6EZKaL6hPNs"; // Your Personal Access Token
+        const AIRTABLE_BASE_ID = "appvnZktJSa8NsnhG"; // Your Base ID
+        const AIRTABLE_TABLE_NAME = "Responses"; // Your Table Name
+        // ====================================
+
         const dilemmas = [
             {
                 id: 1,
@@ -51,8 +58,6 @@
                 emoji: "✍️"
             }
         ];
-
-        const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdjlRye076lzFoaPSxHz0GxZLrIYUAFZLypQDbk-SoL6QwsHg/formResponse";
 
         let currentPage = 'home';
         let selectedDilemma = null;
@@ -107,7 +112,6 @@
                         `).join('')}
                     </div>
                 </div>
-                <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
             `;
         }
 
@@ -210,9 +214,10 @@
                             ${!submitSuccess ? `
                                 <button onclick="submitComment()" 
                                         id="submitBtn"
+                                        ${isSubmitting ? 'disabled' : ''}
                                         class="mt-3 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed w-full sm:w-auto">
                                     ${isSubmitting ? 
-                                        '<div class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> Submitting...' 
+                                        '<div class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> <span>Submitting...</span>' 
                                         : '📤 Submit Comment'}
                                 </button>
                             ` : `
@@ -229,7 +234,6 @@
                         </button>
                     </div>
                 </div>
-                <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
             `;
         }
 
@@ -259,7 +263,7 @@
             render();
         }
 
-        function submitComment() {
+        async function submitComment() {
             const commentText = comment.trim();
 
             if (!commentText) {
@@ -270,51 +274,47 @@
             isSubmitting = true;
             render();
 
-            // Create a form that will submit to Google Forms
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = GOOGLE_FORM_URL;
-            form.target = 'hidden_iframe';
+            const dilemma = dilemmas.find(d => d.id === selectedDilemma);
+            
+            // Airtable API endpoint
+            const airtableUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`;
 
-            // Add scenario number field
-            const scenarioInput = document.createElement('input');
-            scenarioInput.type = 'hidden';
-            scenarioInput.name = 'entry.1471194457';
-            scenarioInput.value = `Scenario ${selectedDilemma}`;
-            form.appendChild(scenarioInput);
+            try {
+                const response = await fetch(airtableUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        records: [
+                            {
+                                fields: {
+                                    "Scenario": `Scenario ${selectedDilemma}: ${dilemma.title}`,
+                                    "Vote": userVote.toUpperCase(),
+                                    "Comment": commentText,
+                                    "Timestamp": new Date().toISOString()
+                                }
+                            }
+                        ]
+                    })
+                });
 
-            // Add vote field
-            const voteInput = document.createElement('input');
-            voteInput.type = 'hidden';
-            voteInput.name = 'entry.619067412';
-            voteInput.value = userVote.toUpperCase();
-            form.appendChild(voteInput);
-
-            // Add comment field
-            const commentInput = document.createElement('input');
-            commentInput.type = 'hidden';
-            commentInput.name = 'entry.1644188439';
-            commentInput.value = commentText;
-            form.appendChild(commentInput);
-
-            // Add timestamp
-            const timestampInput = document.createElement('input');
-            timestampInput.type = 'hidden';
-            timestampInput.name = 'entry.1016419855';
-            timestampInput.value = new Date().toLocaleString();
-            form.appendChild(timestampInput);
-
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-
-            // Show success after a short delay
-            setTimeout(() => {
+                if (response.ok) {
+                    isSubmitting = false;
+                    submitSuccess = true;
+                    comment = '';
+                    render();
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Submission failed');
+                }
+            } catch (error) {
                 isSubmitting = false;
-                submitSuccess = true;
-                comment = '';
                 render();
-            }, 1000);
+                alert('Failed to submit comment. Please check your Airtable configuration and try again.');
+                console.error('Error:', error);
+            }
         }
 
         // Initialize the app
