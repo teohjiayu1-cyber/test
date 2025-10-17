@@ -9,6 +9,12 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -46,12 +52,14 @@
             }
         ];
 
-        const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdjlRye076lzFoaPSxHz0GxZLrIYUAFZLypQDbk-SoL6QwsHg/viewform";
+        const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdjlRye076lzFoaPSxHz0GxZLrIYUAFZLypQDbk-SoL6QwsHg/formResponse";
 
         let currentPage = 'home';
         let selectedDilemma = null;
         let userVote = null;
         let comment = '';
+        let isSubmitting = false;
+        let submitSuccess = false;
         let votes = {
             1: { yes: 0, no: 0 },
             2: { yes: 0, no: 0 },
@@ -99,6 +107,7 @@
                         `).join('')}
                     </div>
                 </div>
+                <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
             `;
         }
 
@@ -194,12 +203,24 @@
                             <textarea id="commentBox" 
                                       placeholder="What's your perspective on this dilemma? Share your thoughts here..."
                                       class="w-full border-2 border-gray-300 rounded-lg p-4 focus:border-indigo-500 focus:outline-none resize-none"
-                                      rows="4"></textarea>
+                                      rows="4"
+                                      ${submitSuccess ? 'disabled' : ''}
+                                      oninput="comment = this.value"></textarea>
                             
-                            <button onclick="submitComment()" 
-                                    class="mt-3 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors w-full sm:w-auto">
-                                📤 Submit Comment
-                            </button>
+                            ${!submitSuccess ? `
+                                <button onclick="submitComment()" 
+                                        id="submitBtn"
+                                        class="mt-3 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed w-full sm:w-auto">
+                                    ${isSubmitting ? 
+                                        '<div class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> Submitting...' 
+                                        : '📤 Submit Comment'}
+                                </button>
+                            ` : `
+                                <div class="mt-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                                    <span class="text-xl">✓</span>
+                                    <span class="font-semibold">Comment submitted successfully!</span>
+                                </div>
+                            `}
                         </div>
 
                         <button onclick="backToHome()" 
@@ -208,6 +229,7 @@
                         </button>
                     </div>
                 </div>
+                <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
             `;
         }
 
@@ -215,6 +237,7 @@
             selectedDilemma = id;
             userVote = null;
             comment = '';
+            submitSuccess = false;
             currentPage = 'poll';
             render();
         }
@@ -232,36 +255,66 @@
             selectedDilemma = null;
             userVote = null;
             comment = '';
+            submitSuccess = false;
             render();
         }
 
         function submitComment() {
-            const commentBox = document.getElementById('commentBox');
-            const commentText = commentBox.value.trim();
+            const commentText = comment.trim();
 
             if (!commentText) {
                 alert('Please enter a comment before submitting.');
                 return;
             }
 
-            const dilemma = dilemmas.find(d => d.id === selectedDilemma);
-            
-            // Build the pre-filled form URL
-            const params = new URLSearchParams({
-                'entry.1471194457': `Scenario ${selectedDilemma}`,
-                'entry.619067412': userVote.toUpperCase(),
-                'entry.1644188439': commentText,
-                'entry.1016419855': new Date().toLocaleString()
-            });
+            isSubmitting = true;
+            render();
 
-            const prefilledFormUrl = `${GOOGLE_FORM_URL}?${params.toString()}`;
+            // Create a form that will submit to Google Forms
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = GOOGLE_FORM_URL;
+            form.target = 'hidden_iframe';
 
-            // Open the pre-filled form in a new tab
-            window.open(prefilledFormUrl, '_blank');
+            // Add scenario number field
+            const scenarioInput = document.createElement('input');
+            scenarioInput.type = 'hidden';
+            scenarioInput.name = 'entry.1471194457';
+            scenarioInput.value = `Scenario ${selectedDilemma}`;
+            form.appendChild(scenarioInput);
 
-            // Clear the comment box and show success message
-            commentBox.value = '';
-            alert('✓ Form opened in a new tab! Please click Submit on the form page to complete your submission.');
+            // Add vote field
+            const voteInput = document.createElement('input');
+            voteInput.type = 'hidden';
+            voteInput.name = 'entry.619067412';
+            voteInput.value = userVote.toUpperCase();
+            form.appendChild(voteInput);
+
+            // Add comment field
+            const commentInput = document.createElement('input');
+            commentInput.type = 'hidden';
+            commentInput.name = 'entry.1644188439';
+            commentInput.value = commentText;
+            form.appendChild(commentInput);
+
+            // Add timestamp
+            const timestampInput = document.createElement('input');
+            timestampInput.type = 'hidden';
+            timestampInput.name = 'entry.1016419855';
+            timestampInput.value = new Date().toLocaleString();
+            form.appendChild(timestampInput);
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+
+            // Show success after a short delay
+            setTimeout(() => {
+                isSubmitting = false;
+                submitSuccess = true;
+                comment = '';
+                render();
+            }, 1000);
         }
 
         // Initialize the app
