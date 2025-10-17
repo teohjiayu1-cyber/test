@@ -3,180 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The AI Dilemma - Poll</title>
+    <title>The AI Dilemma - Let us know your thoughts!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-    <div id="app"></div>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div id="app" class="min-h-screen p-6"></div>
 
     <script>
-        // ====== AIRTABLE CONFIGURATION ======
-        // REPLACE THESE WITH YOUR ACTUAL VALUES
-        const AIRTABLE_TOKEN = "patXCd6EZKaL6hPNs"; // Your Personal Access Token
-        const AIRTABLE_BASE_ID = "appvnZktJSa8NsnhG"; // Your Base ID
-        const AIRTABLE_TABLE_NAME = "Responses"; // Your Table Name
-        // ====================================
-
-        const dilemmas = [
+        const scenarios = [
             {
                 id: 1,
+                emoji: "💭",
                 title: "Students use ChatGPT to generate ideas for class discussion",
                 question: "Should I restrict AI use during class preparation?",
-                guideline: "Lesson Enactment: Avoid over-reliance. Design parts of the lesson where students engage in non-AI critical thinking, discussion, or hands-on work.",
-                emoji: "💭"
+                guideline: "Lesson Enactment: Avoid over-reliance. Design parts of the lesson where students engage in non-AI critical thinking, discussion, or hands-on work."
             },
             {
                 id: 2,
+                emoji: "🤔",
                 title: "I receive a piece of work that seems AI-generated, but I'm not certain",
                 question: "Should I confront the student directly about it?",
-                guideline: "Assessment and Feedback: State clearly if AI is permitted in formative work, and the conditions (e.g. must acknowledge tool used, context of use).",
-                emoji: "🤔"
+                guideline: "Assessment and Feedback: State clearly if AI is permitted in formative work, and the conditions (e.g. must acknowledge tool used, context of use)."
             },
             {
                 id: 3,
+                emoji: "📝",
                 title: "Students use ChatGPT to generate step-by-step solutions for tutorial questions",
                 question: "Should I allow students to use AI-generated solutions as part of their learning process?",
-                guideline: "Positive Classroom Culture: Address misconceptions. Clarify that AI is a tool, not a replacement for human effort or creativity.",
-                emoji: "📝"
+                guideline: "Positive Classroom Culture: Address misconceptions. Clarify that AI is a tool, not a replacement for human effort or creativity."
             },
             {
                 id: 4,
+                emoji: "📋",
                 title: "A teacher uses AI to draft Prelim/Promo exam questions",
                 question: "Should teachers rely on AI tools to generate assessment questions?",
-                guideline: "Lesson Preparation: Select vetted, MOE-approved or school-endorsed AI tools (e.g. SLS); avoid entering sensitive student or staff data into public tools (e.g. ChatGPT, Gemini).",
-                emoji: "✍️"
+                guideline: "Lesson Preparation: Select vetted, MOE-approved or school-endorsed AI tools (eg. SLS); avoid entering sensitive student or staff data into public tools (eg. ChatGPT, Gemini)."
             }
         ];
 
         let currentPage = 'home';
-        let selectedDilemma = null;
-        let userVote = null;
-        let comment = '';
-        let isSubmitting = false;
-        let submitSuccess = false;
+        let selectedScenario = null;
         let votes = {
             1: { yes: 0, no: 0 },
             2: { yes: 0, no: 0 },
             3: { yes: 0, no: 0 },
             4: { yes: 0, no: 0 }
         };
-        let votedDilemmas = new Set();
+        let userVote = null;
 
         function render() {
             const app = document.getElementById('app');
             
             if (currentPage === 'home') {
-                app.innerHTML = renderHomePage();
-            } else if (currentPage === 'poll') {
-                app.innerHTML = renderPollPage();
-            } else if (currentPage === 'results') {
-                app.innerHTML = renderResultsPage();
-            }
-        }
+                app.innerHTML = `
+                    <div class="max-w-4xl mx-auto fade-in">
+                        <div class="text-center mb-12 pt-8">
+                            <h1 class="text-5xl font-bold text-indigo-900 mb-4">
+                                The AI Dilemma
+                            </h1>
+                            <p class="text-xl text-indigo-700">
+                                Let us know your thoughts!
+                            </p>
+                        </div>
 
-        function renderHomePage() {
-            return `
-                <div class="max-w-4xl mx-auto p-6">
-                    <div class="text-center mb-12">
-                        <h1 class="text-5xl font-bold text-indigo-900 mb-4">🤖 The AI Dilemma</h1>
-                        <p class="text-xl text-indigo-700">Let us know your thoughts!</p>
-                        <p class="text-gray-600 mt-2">Choose a scenario below to share your perspective</p>
-                    </div>
-
-                    <div class="grid gap-6 md:grid-cols-2">
-                        ${dilemmas.map(dilemma => `
-                            <div onclick="selectDilemma(${dilemma.id})" 
-                                 class="bg-white rounded-xl shadow-lg p-6 cursor-pointer transform transition-all hover:scale-105 hover:shadow-xl border-2 border-transparent hover:border-indigo-300">
-                                <div class="flex items-start gap-4">
-                                    <span class="text-4xl">${dilemma.emoji}</span>
-                                    <div class="flex-1">
-                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Scenario ${dilemma.id}</h3>
-                                        <p class="text-gray-600 text-sm leading-relaxed">${dilemma.title}</p>
-                                        ${votedDilemmas.has(dilemma.id) ? 
-                                            '<span class="inline-block mt-3 text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full">✓ Voted</span>' 
-                                            : ''}
+                        <div class="grid md:grid-cols-2 gap-6">
+                            ${scenarios.map(scenario => `
+                                <div
+                                    onclick="selectScenario(${scenario.id})"
+                                    class="bg-white rounded-xl shadow-lg p-6 cursor-pointer transform transition-all hover:scale-105 hover:shadow-xl"
+                                >
+                                    <div class="text-5xl mb-4">${scenario.emoji}</div>
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                                        Scenario ${scenario.id}
+                                    </h3>
+                                    <p class="text-gray-600 leading-relaxed">
+                                        ${scenario.title}
+                                    </p>
+                                    <div class="mt-4 text-indigo-600 font-medium flex items-center">
+                                        <span>Respond →</span>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderPollPage() {
-            const dilemma = dilemmas.find(d => d.id === selectedDilemma);
-            return `
-                <div class="max-w-3xl mx-auto p-6">
-                    <button onclick="backToHome()" class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mb-6 transition-colors">
-                        ← Back to scenarios
-                    </button>
-
-                    <div class="bg-white rounded-2xl shadow-xl p-8">
-                        <div class="text-center mb-8">
-                            <span class="text-6xl mb-4 block">${dilemma.emoji}</span>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4">Scenario ${dilemma.id}</h2>
-                            <p class="text-gray-600 mb-6 italic">${dilemma.title}</p>
-                        </div>
-
-                        <div class="bg-indigo-50 rounded-xl p-6 mb-8">
-                            <h3 class="text-xl font-semibold text-indigo-900 mb-4 text-center">${dilemma.question}</h3>
-                        </div>
-
-                        <div class="flex gap-4 justify-center">
-                            <button onclick="vote('yes')" class="flex-1 max-w-xs bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors shadow-lg hover:shadow-xl">
-                                👍 Yes
-                            </button>
-                            <button onclick="vote('no')" class="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors shadow-lg hover:shadow-xl">
-                                👎 No
-                            </button>
+                            `).join('')}
                         </div>
                     </div>
-                </div>
-            `;
-        }
+                `;
+            } else if (currentPage === 'poll') {
+                app.innerHTML = `
+                    <div class="max-w-3xl mx-auto pt-8 fade-in">
+                        <button
+                            onclick="backToHome()"
+                            class="mb-6 flex items-center text-indigo-700 hover:text-indigo-900 font-medium"
+                        >
+                            ← Back to Home
+                        </button>
 
-        function renderResultsPage() {
-            const dilemma = dilemmas.find(d => d.id === selectedDilemma);
-            const totalVotes = votes[selectedDilemma].yes + votes[selectedDilemma].no;
-            const yesPercent = totalVotes > 0 ? Math.round((votes[selectedDilemma].yes / totalVotes) * 100) : 0;
-            const noPercent = totalVotes > 0 ? Math.round((votes[selectedDilemma].no / totalVotes) * 100) : 0;
-
-            return `
-                <div class="max-w-3xl mx-auto p-6">
-                    <div class="bg-white rounded-2xl shadow-xl p-8">
-                        <div class="text-center mb-8">
-                            <span class="text-6xl mb-4 block">${dilemma.emoji}</span>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Thank you for voting!</h2>
-                            <p class="text-gray-600">You voted: <span class="font-bold text-indigo-600">${userVote.toUpperCase()}</span></p>
-                        </div>
-
-                        <div class="mb-8">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-semibold text-gray-800">📊 Live Results</h3>
-                                <span class="text-sm text-gray-500">${totalVotes} ${totalVotes === 1 ? 'vote' : 'votes'} total</span>
+                        <div class="bg-white rounded-xl shadow-xl p-8">
+                            <div class="text-6xl text-center mb-6">${selectedScenario.emoji}</div>
+                            
+                            <div class="mb-8">
+                                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                                    Scenario ${selectedScenario.id}
+                                </h2>
+                                <p class="text-gray-600 mb-6 leading-relaxed">
+                                    ${selectedScenario.title}
+                                </p>
+                                <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded">
+                                    <p class="text-lg font-semibold text-indigo-900">
+                                        ${selectedScenario.question}
+                                    </p>
+                                </div>
                             </div>
 
-                            <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <button
+                                    onclick="vote('yes')"
+                                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-6 px-8 rounded-lg text-2xl transition-colors shadow-lg"
+                                >
+                                    Yes
+                                </button>
+                                <button
+                                    onclick="vote('no')"
+                                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 px-8 rounded-lg text-2xl transition-colors shadow-lg"
+                                >
+                                    No
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentPage === 'results') {
+                const currentVotes = votes[selectedScenario.id];
+                const totalVotes = currentVotes.yes + currentVotes.no;
+                const yesPercentage = totalVotes > 0 ? Math.round((currentVotes.yes / totalVotes) * 100) : 0;
+                const noPercentage = totalVotes > 0 ? Math.round((currentVotes.no / totalVotes) * 100) : 0;
+
+                app.innerHTML = `
+                    <div class="max-w-3xl mx-auto pt-8 fade-in">
+                        <div class="bg-white rounded-xl shadow-xl p-8 mb-6">
+                            <div class="text-center mb-6">
+                                <div class="text-5xl mb-4">${selectedScenario.emoji}</div>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                                    Results - Scenario ${selectedScenario.id}
+                                </h2>
+                                <p class="text-gray-600 italic mb-4">
+                                    "${selectedScenario.question}"
+                                </p>
+                                <div class="flex items-center justify-center text-gray-500">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                    </svg>
+                                    <span>${totalVotes} ${totalVotes === 1 ? 'vote' : 'votes'} recorded</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4 mb-8">
                                 <div>
                                     <div class="flex justify-between mb-2">
                                         <span class="font-semibold text-green-700">Yes</span>
-                                        <span class="font-bold text-green-700">${yesPercent}%</span>
+                                        <span class="font-bold text-green-700">${yesPercentage}%</span>
                                     </div>
-                                    <div class="bg-gray-200 rounded-full h-6 overflow-hidden">
-                                        <div class="bg-green-500 h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2" style="width: ${yesPercent}%">
-                                            ${yesPercent > 0 ? `<span class="text-white text-xs font-bold">${votes[selectedDilemma].yes}</span>` : ''}
+                                    <div class="w-full bg-gray-200 rounded-full h-8">
+                                        <div
+                                            class="bg-green-500 h-8 rounded-full transition-all duration-500 flex items-center justify-end pr-3"
+                                            style="width: ${yesPercentage}%"
+                                        >
+                                            ${yesPercentage > 10 ? `<span class="text-white font-bold">${currentVotes.yes}</span>` : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -184,140 +184,82 @@
                                 <div>
                                     <div class="flex justify-between mb-2">
                                         <span class="font-semibold text-red-700">No</span>
-                                        <span class="font-bold text-red-700">${noPercent}%</span>
+                                        <span class="font-bold text-red-700">${noPercentage}%</span>
                                     </div>
-                                    <div class="bg-gray-200 rounded-full h-6 overflow-hidden">
-                                        <div class="bg-red-500 h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2" style="width: ${noPercent}%">
-                                            ${noPercent > 0 ? `<span class="text-white text-xs font-bold">${votes[selectedDilemma].no}</span>` : ''}
+                                    <div class="w-full bg-gray-200 rounded-full h-8">
+                                        <div
+                                            class="bg-red-500 h-8 rounded-full transition-all duration-500 flex items-center justify-end pr-3"
+                                            style="width: ${noPercentage}%"
+                                        >
+                                            ${noPercentage > 10 ? `<span class="text-white font-bold">${currentVotes.no}</span>` : ''}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="bg-amber-50 border-l-4 border-amber-400 p-6 mb-6 rounded-lg">
-                            <h4 class="font-semibold text-amber-900 mb-2">💡 Reflection & Guideline</h4>
-                            <p class="text-amber-800 text-sm leading-relaxed">${dilemma.guideline}</p>
-                        </div>
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg mb-8">
+                                <h3 class="font-bold text-blue-900 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                    Guideline for Reflection
+                                </h3>
+                                <p class="text-blue-800 leading-relaxed">
+                                    ${selectedScenario.guideline}
+                                </p>
+                            </div>
 
-                        <div class="mb-6">
-                            <label class="text-gray-700 font-semibold mb-2 flex items-center gap-2">
-                                💬 Share your thoughts (optional)
-                            </label>
-                            <textarea id="commentBox" 
-                                      placeholder="What's your perspective on this dilemma? Share your thoughts here..."
-                                      class="w-full border-2 border-gray-300 rounded-lg p-4 focus:border-indigo-500 focus:outline-none resize-none"
-                                      rows="4"
-                                      ${submitSuccess ? 'disabled' : ''}
-                                      oninput="comment = this.value"></textarea>
-                            
-                            ${!submitSuccess ? `
-                                <button onclick="submitComment()" 
-                                        id="submitBtn"
-                                        ${isSubmitting ? 'disabled' : ''}
-                                        class="mt-3 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed w-full sm:w-auto">
-                                    ${isSubmitting ? 
-                                        '<div class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> <span>Submitting...</span>' 
-                                        : '📤 Submit Comment'}
-                                </button>
-                            ` : `
-                                <div class="mt-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                                    <span class="text-xl">✓</span>
-                                    <span class="font-semibold">Comment submitted successfully!</span>
+                            <div class="border-t pt-6">
+                                <h3 class="font-bold text-gray-800 mb-4">Share Your Comments (Optional)</h3>
+                                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                                    <iframe
+                                        src="https://docs.google.com/forms/d/e/1FAIpQLSdjlRye076lzFoaPSxHz0GxZLrIYUAFZLypQDbk-SoL6QwsHg/viewform?embedded=true"
+                                        width="100%"
+                                        height="400"
+                                        frameborder="0"
+                                        marginheight="0"
+                                        marginwidth="0"
+                                        class="rounded"
+                                    >
+                                        Loading Google Form...
+                                    </iframe>
                                 </div>
-                            `}
+                            </div>
                         </div>
 
-                        <button onclick="backToHome()" 
-                                class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-xl transition-colors shadow-lg hover:shadow-xl">
+                        <button
+                            onclick="backToHome()"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition-colors shadow-lg flex items-center justify-center"
+                        >
                             ← Back to Homepage
                         </button>
                     </div>
-                </div>
-            `;
+                `;
+            }
         }
 
-        function selectDilemma(id) {
-            selectedDilemma = id;
+        function selectScenario(id) {
+            selectedScenario = scenarios.find(s => s.id === id);
             userVote = null;
-            comment = '';
-            submitSuccess = false;
             currentPage = 'poll';
             render();
         }
 
-        function vote(voteChoice) {
-            votes[selectedDilemma][voteChoice]++;
-            userVote = voteChoice;
-            votedDilemmas.add(selectedDilemma);
+        function vote(voteType) {
+            votes[selectedScenario.id][voteType]++;
+            userVote = voteType;
             currentPage = 'results';
             render();
         }
 
         function backToHome() {
             currentPage = 'home';
-            selectedDilemma = null;
+            selectedScenario = null;
             userVote = null;
-            comment = '';
-            submitSuccess = false;
             render();
         }
 
-        async function submitComment() {
-            const commentText = comment.trim();
-
-            if (!commentText) {
-                alert('Please enter a comment before submitting.');
-                return;
-            }
-
-            isSubmitting = true;
-            render();
-
-            const dilemma = dilemmas.find(d => d.id === selectedDilemma);
-            
-            // Airtable API endpoint
-            const airtableUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`;
-
-            try {
-                const response = await fetch(airtableUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        records: [
-                            {
-                                fields: {
-                                    "Scenario": `Scenario ${selectedDilemma}: ${dilemma.title}`,
-                                    "Vote": userVote.toUpperCase(),
-                                    "Comment": commentText,
-                                    "Timestamp": new Date().toISOString()
-                                }
-                            }
-                        ]
-                    })
-                });
-
-                if (response.ok) {
-                    isSubmitting = false;
-                    submitSuccess = true;
-                    comment = '';
-                    render();
-                } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || 'Submission failed');
-                }
-            } catch (error) {
-                isSubmitting = false;
-                render();
-                alert('Failed to submit comment. Please check your Airtable configuration and try again.');
-                console.error('Error:', error);
-            }
-        }
-
-        // Initialize the app
+        // Initial render
         render();
     </script>
 </body>
